@@ -2,6 +2,9 @@ package Snippet::Element;
 use Moose;
 use Moose::Util::TypeConstraints;
 
+# this is where is all happens
+# some of it ain't pretty either
+
 our $VERSION   = '0.01';
 our $AUTHORITY = 'cpan:STEVAN';
 
@@ -10,21 +13,20 @@ use HTML::Selector::XPath;
 
 my $PARSER = XML::LibXML->new;
 $PARSER->no_network(1);
-$PARSER->keep_blanks(0);
+$PARSER->keep_blanks(0); # << on the fly whitespace "compression"
 
-class_type 'XML::LibXML::Document';
 class_type 'XML::LibXML::Node';
 class_type 'XML::LibXML::NodeList';
+class_type 'XML::LibXML::Document';
 
+coerce 'XML::LibXML::Document'
+    => from 'Str'
+        => via { $PARSER->parse_string($_) };
+
+# I am coerce-able
 coerce 'Snippet::Element'
     => from 'Str'
         => via { Snippet::Element->new(body => $_) };
-
-subtype 'Snippet::Document' => as 'XML::LibXML::Document';
-
-coerce 'Snippet::Document'
-    => from 'Str'
-        => via { $PARSER->parse_string($_) };
 
 has 'parent' => (
     is        => 'ro',
@@ -37,7 +39,7 @@ has 'parent' => (
 has '_body' => (
     init_arg => 'body',
     is       => 'rw',
-    isa      => 'Snippet::Document | XML::LibXML::Node | XML::LibXML::NodeList',
+    isa      => 'XML::LibXML::Document | XML::LibXML::Node | XML::LibXML::NodeList',
     coerce   => 1,
     required => 1,
 );
@@ -48,6 +50,9 @@ sub find {
     my ($self, $selector) = @_;
 
     my $nodes = $self->_body->findnodes(
+        # FIXME:
+        # we need to support pure  
+        # xpath eventually here ...
         HTML::Selector::XPath->new( $selector )->to_xpath
     );
 
