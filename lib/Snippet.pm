@@ -7,7 +7,7 @@ our $VERSION   = '0.01';
 our $AUTHORITY = 'cpan:STEVAN';
 
 has 'html' => (
-    is       => 'ro',
+    is       => 'rw',
     isa      => 'Snippet::Element',   
     coerce   => 1,
     required => 1,
