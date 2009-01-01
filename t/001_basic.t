@@ -36,7 +36,11 @@ lives_ok {
 
 is($s->render, '<p>Hello <span class="thing">World</span></p>', '... rendered correctly');
 
+lives_ok {
+    $s->visible(0);
+} '... changed visibility';
 
+ok(!$s->render, '... nothing to render, I am invisible');
 
 
 
