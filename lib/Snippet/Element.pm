@@ -5,11 +5,16 @@ use Moose::Util::TypeConstraints;
 # this is where is all happens
 # some of it ain't pretty either
 
-our $VERSION   = '0.01';
-our $AUTHORITY = 'cpan:STEVAN';
+use Carp qw(croak);
 
 use XML::LibXML;
 use HTML::Selector::XPath;
+use MooseX::Types::Path::Class qw(File);
+
+use namespace::clean -except => 'meta';
+
+our $VERSION   = '0.01';
+our $AUTHORITY = 'cpan:STEVAN';
 
 my $PARSER = XML::LibXML->new;
 $PARSER->no_network(1);
@@ -20,19 +25,17 @@ class_type 'XML::LibXML::NodeList';
 class_type 'XML::LibXML::Document';
 
 coerce 'XML::LibXML::Document'
-    => from 'Str'
-        => via { $PARSER->parse_string($_) };
+    => from Str => via { $PARSER->parse_string($_) },
+	=> from File,  via { warn $_; $PARSER->parse_file($_->stringify) };
 
 # I am coerce-able
 coerce 'Snippet::Element'
-    => from 'Str'
-        => via { Snippet::Element->new(body => $_) };
+    => from Str => via { Snippet::Element->new(body => $_) },
+    => from File,  via { Snippet::Element->new(body => $_) };
 
 has 'parent' => (
     is        => 'ro',
-    writer    => '_set_parent',
     isa       => 'Snippet::Element',
-    weak_ref  => 1,
     predicate => 'has_parent'
 );
 
@@ -44,45 +47,32 @@ has '_body' => (
     required => 1,
 );
 
+sub clone {
+	my $self = shift;
+
+	(ref $self)->new( body => $self->_body->cloneNode(1) );
+}
+
 sub is_root { !(shift)->has_parent }
 
 sub find {
-    my ($self, $selector) = @_;
+    my ($self, $xpath) = @_;
 
-    my $nodes = $self->_body->findnodes(
-        # FIXME:
-        # we need to support pure  
-        # xpath eventually here ...
-        HTML::Selector::XPath->new( $selector )->to_xpath
-    );
+	unless ( $xpath =~ m{(?: ^/ | ^id\( | [:\[@] )}x ) {
+		$xpath = HTML::Selector::XPath::selector_to_xpath($xpath);
+	}
+
+    my $nodes = $self->_body->findnodes($xpath);
 
     return unless $nodes->size;
 
-    (blessed $self)->new(
-        body   => ($nodes->size == 1 ? $nodes->get_node(0) : $nodes),
-        parent => $self
-    );
+	return $self->_child_element($nodes->size == 1 ? $nodes->get_node(0) : $nodes);
 }
 
 sub children {
     my $self = shift;
-    map {
-        (blessed $self)->new(
-            body   => $_,
-            parent => $self
-        )
-    } do {
-        my $body = $self->_body;
-        if ($body->isa('XML::LibXML::Document')) {
-            $body->documentElement->getChildNodes
-        }
-        elsif ($body->isa('XML::LibXML::Node')) {
-            $body
-        }
-        elsif ($body->isa('XML::LibXML::NodeList')) {
-            $body->get_nodelist
-        }
-    }
+
+    map { $self->_child_element($_) } $self->_child_nodes;
 }
 
 sub length {
@@ -97,11 +87,66 @@ sub each {
     $self;
 }
 
+sub content {
+	my ( $self, $replacement ) = @_;
+
+	if ( ref $replacement ) {
+		if ( blessed $replacement ) {
+			if ( $replacement->isa("Snippet::Element") ) {
+				$self->_replace_inner_node($replacement->_child_nodes);
+			} else {
+				$self->_replace_inner_node($replacement);
+			}
+		} else {
+			croak "Content must be a string or an object";
+		}
+	} else {
+		return $self->html($replacement);
+	}
+}
+
+sub _prepare_new_children {
+	my ( $self, @children ) = @_;
+
+	map { $self->_prepare_new_child($_) } @children;
+}
+
+sub _prepare_new_child {
+	my ( $self, $child ) = @_;
+
+	if ( ref $child ) {
+		if ( blessed $child ) {
+			if ( $child->isa("Snippet::Element") ) {
+				return $child->_child_nodes;
+			} else {
+				return $child;
+			}
+		} else {
+			croak "Content must be a string or an object";
+		}
+	} else {
+		return $PARSER->parse_string("<doc>$child</doc>")->documentElement->getChildnodes;
+	}
+}
+
+sub append {
+	my ( $self, @children ) = @_;
+
+	$self->_body->addChild($_) for $self->_prepare_new_children(@children);
+}
+
+sub prepend {
+	my ( $self, @children ) = @_;
+
+	$self->_body->prepend($_) for reverse $self->_prepare_new_children(@children);
+}
+
 sub html {
-    my $self = shift;
-    return $self->_replace_inner_node(
-        $PARSER->parse_string(shift)->documentElement
-    );
+	my ( $self, $child ) = @_;
+
+	my @nodes = $PARSER->parse_string("<doc>$child</doc>")->documentElement->getChildnodes;
+
+    return $self->_replace_inner_node(@nodes);
 }
 
 sub text {
@@ -112,49 +157,98 @@ sub text {
 }
 
 sub attr {
-    my $body = (shift)->_body;
+	my ( $self, $name, @args ) = @_;
+
+    my $body = $self->_body;
     (!$body->isa('XML::LibXML::NodeList'))
         || confess "Cannot call attr() on a node_list";
-    my $name = shift;
-    $body->setAttribute($name, $_[0]) if @_;
+
+    $body->setAttribute($name, $args[0]) if @args;
+
     $body->getAttribute($name);
 }
 
+sub as_xml {
+	shift->_body->toString;
+}
+
 sub render {
-    my $body = (shift)->_body;
-    if ($body->isa('XML::LibXML::Document')) {
-        return $body->documentElement->toString;
-    }
-    elsif ($body->isa('XML::LibXML::Node')) {
-        return $body->toString;
-    }
-    elsif ($body->isa('XML::LibXML::NodeList')) {
-        return join "" => map { $_->toString } $body->get_nodelist;
-    }
+	my $self = shift;
+
+	join( "", map { $_->toString } $self->_nodes );
 }
 
 # private 
 
+sub _child_element {
+	my ( $self, @args ) = @_;
+
+	unshift @args, "body" if @args % 2;
+
+	(ref $self)->new(
+		parent => $self,
+		@args,
+	);
+}
+
+sub _node {
+	my $self = shift;
+
+	my $body = $self->_body;
+
+	warn "body: $body";
+
+    if ($body->isa('XML::LibXML::Document')) {
+        return $body->documentElement;
+    } else {
+		return $body;
+	}
+}
+
+sub _nodes {
+	my $self = shift;
+
+	my $node = $self->_node;
+
+    if ($node->isa('XML::LibXML::NodeList')) {
+        return $node->get_nodelist;
+	} else {
+		return $node;
+	}
+}
+
+sub _child_nodes {
+	my $self = shift;
+
+	my $body = $self->_body;
+
+	if ( $body->isa('XML::LibXML::Document') ) {
+		return $body->documentElement->getChildnodes;
+	} else {
+		return $self->_nodes;
+	}
+}
+
 sub _replace_inner_node {
-    my ($self, $new) = @_;
+    my ($self, @new) = @_;
 
     my $old = $self->_body;
 
     if ($old->isa('XML::LibXML::NodeList')) {
         foreach my $node ($old->get_nodelist) {
             $node->removeChild($_) foreach $node->getChildnodes;
-            $node->addChild($new->cloneNode(1));
+            $node->addChild($_->cloneNode(1)) for @new;
         }
     }
     else {
         $old->removeChild($_) foreach $old->getChildnodes;
-        $old->addChild($new);
+        $old->addChild($_) for @new;
     }
 
     $self;
 }
 
-no Moose::Util::TypeConstraints; no Moose; 1;
+1;
 
 __END__
 
