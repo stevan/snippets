@@ -7,6 +7,14 @@ use Moose::Util::TypeConstraints;
 
 use Carp qw(croak);
 
+# NOTE:
+# There is no reason why we cant
+# use another XML parser here either
+# they would simple need to reimplement
+# about 80% of this class, but it is
+# possible. (think: Drivers)
+# - SL
+
 use XML::LibXML;
 use HTML::Selector::XPath;
 use MooseX::Types::Path::Class qw(File);
@@ -26,7 +34,7 @@ class_type 'XML::LibXML::Document';
 
 coerce 'XML::LibXML::Document'
     => from Str => via { $PARSER->parse_string($_) },
-	=> from File,  via { warn $_; $PARSER->parse_file($_->stringify) };
+	=> from File,  via { $PARSER->parse_file($_->stringify) };
 
 # I am coerce-able
 coerce 'Snippet::Element'
@@ -196,7 +204,7 @@ sub _node {
 
 	my $body = $self->_body;
 
-	warn "body: $body";
+	#warn "body: $body";
 
     if ($body->isa('XML::LibXML::Document')) {
         return $body->documentElement;

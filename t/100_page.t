@@ -5,6 +5,9 @@ use warnings;
 
 use Test::More 'no_plan';
 use Test::Exception;
+use FindBin;
+
+use lib "$FindBin::Bin/lib";
 
 BEGIN {
     use_ok('Snippet');
@@ -12,85 +15,18 @@ BEGIN {
     use_ok('Snippet::Page');
 }
 
-{
-    package TestApp::Snippet::LoginForm;
-    use Moose;
+use TestApp::Snippet::LoginForm;
+use TestApp::Pages::Login;
 
-    extends 'Snippet';
-
-    has 'is_authenticated' => (
-        is      => 'rw',
-        isa     => 'Bool',
-        default => sub { 0 },
-    );
-
-    sub authenticate {
-        my ($self, $username, $password) = @_;
-        $self->is_authenticated(
-            $username eq 'foo' && $password eq 'bar' ? 1 : 0
-        );
-    }
-
-    sub RUN {
-        my ($self, $request) = @_;
-        if ($request->{username} && $request->{password}) {
-            $self->authenticate(
-                $request->{username},
-                $request->{password}
-            );
-        }
-    }
-}
-
-{
-    package TestApp::Pages::Login;
-    use Moose;
-
-    extends 'Snippet::Page';
-
-    # just a little short cut ...
-    sub message          { (shift)->snippets->{'.message'}       }    
-    sub login_form       { (shift)->snippets->{'#login_form'}    }
-    sub is_authenticated { (shift)->login_form->is_authenticated }
-
-    sub RUN {
-        my ($self, $request) = @_;
-        if ($self->is_authenticated) {
-            $self->login_form->visible(0);
-            $self->message->html('<em>Thank You For Logging In</em>');
-        }
-    }
-}
+my $html_dir = Path::Class::Dir->new($FindBin::Bin, qw[ lib html ]);
 
 sub make_login {
     return TestApp::Pages::Login->new(
-        html => q{
-            <html>
-                <head>
-                    <title>Please Login</title>
-                </head>
-                <body>
-                    <div class="message"></div>
-                    <div id="login_form">
-                        <!-- login form goes here -->
-                    </div>
-                    <div class="message"></div>
-                </body>
-            </html>
-        },
+        html => $html_dir->file(qw[ testapp pages login.html ]),
         snippets => {
             '.message'    => Snippet->new(html => '<strong>Please Login</strong>'),
             '#login_form' => TestApp::Snippet::LoginForm->new(
-                html => q{
-                    <form>
-                        <label>Username</label>
-                        <input type="text" name="username" />
-                        <label>Password</label>
-                        <input type="text" name="password" />
-                        <hr/>
-                        <input type="submit" />
-                    </form>
-                }
+                html => $html_dir->file(qw[ testapp snippet loginform.html ])
              ),
         },
     );
