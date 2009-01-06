@@ -18,10 +18,10 @@ sub authenticate {
 
 sub RUN {
     my ($self, $request) = @_;
-    if ($request->{username} && $request->{password}) {
+    if ($request->param('username') && $request->param('password')) {
         $self->authenticate(
-            $request->{username},
-            $request->{password}
+            $request->param('username'),
+            $request->param('password')
         );
     }
 }

@@ -13,6 +13,7 @@ BEGIN {
     use_ok('Snippet');
     use_ok('Snippet::Element');
     use_ok('Snippet::Page');
+    use_ok('Snippet::Test::Request');
 }
 
 use TestApp::Snippet::LoginForm;
@@ -39,7 +40,7 @@ sub make_login {
     ok(!$p->is_authenticated, '... we are not authenticated');
 
     lives_ok {
-        $p->process({});
+        $p->process(Snippet::Test::Request->new);
     } '... process the page';
 
     ok(!$p->is_authenticated, '... we are not authenticated');
@@ -56,7 +57,7 @@ sub make_login {
     isa_ok($p, 'Snippet::Page');
 
     lives_ok {
-        $p->process({ username => 'foo', password => 'bar' });
+        $p->process(Snippet::Test::Request->new( params => { username => 'foo', password => 'bar' } ));
     } '... process the page';
 
     ok($p->is_authenticated, '... we are now authenticated');
@@ -73,7 +74,7 @@ sub make_login {
     isa_ok($p, 'Snippet::Page');
 
     lives_ok {
-        $p->process({ username => 'bar', password => 'foo' });
+        $p->process(Snippet::Test::Request->new( params => { username => 'bar', password => 'foo' } ));
     } '... process the page';
 
     ok(!$p->is_authenticated, '... we are no longer authenticated');
