@@ -1,0 +1,92 @@
+-----------------------------------------------------------
+-- Simple Label Example --
+-----------------------------------------------------------
+-- Class
+-----------------------------------------------------------
+
+package MyLabel;
+use Moose;
+
+extends 'Snippet';
+
+has label => (selector => '#my_label', isa => 'Str');
+
+1;
+
+-----------------------------------------------------------
+-- HTML
+-----------------------------------------------------------
+
+<div id="my_label"></div>
+
+-----------------------------------------------------------
+-- Config
+-----------------------------------------------------------
+
+---
+- class: MyLabel
+  html:  my_label.html
+
+-----------------------------------------------------------
+-- Description
+-----------------------------------------------------------
+
+Compiling:
+
+Step 1 - Validation
+
+The "compiler" will introspect MyLabel, finding all the 
+attributes which have selectors, then introspect the 
+HTML file to assure that the selectors exist there. 
+
+Step 2 - Inflation
+
+During the validation phase, the "compiler" will have made
+a note of the type of tag that each selector was attached 
+to. In our case it is a DIV tag. The "compiler" will then 
+"inflate" that attribute to not just be a Str type, but to 
+actually be a Snippet::Element::HTML::Div (*). The newly 
+inflated attribute will, upon object creation, now have 
+a fully created and connected instance of Snippet::Element::HTML::Div 
+which you can use and manipulate. It will remain backwards
+compat with a simple Str as well, so that this:
+
+  $self->label('HELLO WORLD');
+
+will just DWIM (**). But also these lines:
+
+  $self->label->text($dom_text_node);
+  $self->label->html($dom_html_node);
+  $self->label->css( font-size => '12px', color => '#FF0000' );  
+ 
+will also just DWIM.
+
+Step 3 - Archiving
+
+So that we can avoid having to do all this compiling stuff
+every time, we can "archive" the inflated and validated object
+using something like Storable (***) and create something not
+unlike the Cocoa .nib files. 
+
+Deployment:
+
+The archiving would also allow for simplified deployment as well 
+since we could simply archive all our applications snippets 
+into a single Storable "bundle" and deploy just that.
+
+-----------------------------------------------------------
+-- Footnotes
+-----------------------------------------------------------
+
+(*) class name subject to change, here just for illustrative
+    puproses, suffice to say that this is a subclass of 
+    Snippet::Element which is customized to handle the 
+    specific details of the tag, in our case a DIV.
+    
+(**) we simply use coercions for this, it should be pretty 
+     simple
+
+(***) or possibly KiokuDB for a more complex managed solution
+      where we could query and avoid duplication, etc etc.
+
+

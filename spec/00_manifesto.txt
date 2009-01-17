@@ -1,0 +1,16 @@
+The basic idea of Snippets is that you have a class that 
+via it's attribute is expecting to be mated with an XML 
+document that possesses some basic charactaristics.
+
+When mated, the XML and the class can perform several 
+basic transformations, with the ability to extend things 
+and do complex transformations.
+
+In the
+
+  Resource -> Transform -> Representation
+  
+model, the Snippet is the definition of the Transform 
+phase. The Snippet consumes the Resource, is then run 
+(the Transform) and then can be made to spit out the 
+Representation.

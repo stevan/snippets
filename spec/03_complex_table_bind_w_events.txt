@@ -1,0 +1,140 @@
+-----------------------------------------------------------
+-- Complex Data Binding with tables and events --
+-----------------------------------------------------------
+-- Class
+-----------------------------------------------------------
+
+package MyTable;
+use Moose;
+use MooseX::Types::Structured;
+
+extends 'Snippet';
+
+has table => (
+    selector => '#my_table', 
+    isa      => ArrayRef[Dictionary[
+                    username   => Str, 
+                    first_name => Str, 
+                    last_name  => Str
+                ]]
+);
+
+# this is just something which 
+# can give us the table data
+has resource => ( ... )
+
+sub RUN  {
+    my ($self, $r) = @_;
+    $self->table->bind( $self->resource->data );
+}
+
+async 'update_cell' => [ (Int, Str, Str) => Unit ] => sub {
+    my ($self, $row_index, $key, $value) = @_;
+    $self->resource->data->[$row_index]->{$key} = $value;
+};
+
+async 'add_row' => [ HashRef => Unit ] => sub {
+    my ($self, $new_row) = @_;
+    # possibly check the $new_row arg here
+    # since the JSORB HashRef type will not
+    # check the fields like our Dictionary 
+    # type does. Either that or we can let 
+    # the ->push do it (assuming that ->push
+    # will check it).
+    $self->resource->data->push($new_row);
+};
+
+async 'remove_row' => [ Int => Unit ] sub {
+    my ($self, $row_index_to_remove) = @_;
+    $self->resource->data->remove_at($row_index_to_remove);
+};
+
+-----------------------------------------------------------
+-- HTML
+-----------------------------------------------------------
+
+<table id="my_table">
+    <thead>
+        <th name="username">UserName</th>
+        <th name="first_name">First Name</th>
+        <th name="last_name">Last Name</th>                
+    </thead>
+    <tbody></tbody>
+</table>
+
+-----------------------------------------------------------
+-- Config
+-----------------------------------------------------------
+
+---
+- class: MyTable
+  html: my_table.html
+  
+-----------------------------------------------------------
+-- Description
+-----------------------------------------------------------
+
+Data-Binding
+
+Here we show a more complex data bind in which we have a
+table with headers specificed in <thead/> and our class 
+uses the MooseX::Types::Structured extension to define 
+an ArrayRef of Dictionary types. Through type introspection
+we can see the fields of the Dictionary and then via DOM
+introspection we can see that the <th> nodes have name 
+properties that match (*). 
+
+Now, this is not the only way this can be done. It would 
+be possible to have an ArrayRef[My::App::Model::Person]
+type instead and we could introspect the My::App::Model::Person
+class to find the attributes in the same way we introspected
+the Dictionary type to find the fields. 
+
+And in the interest of TIMTOWTDI, it is also possible to 
+have an object which does some type of DataStore role
+which is compatible with what the table is expecting. In 
+fact it would be possible (in the above example) for 
+the ->resource to do such a role and then we would just 
+write this:
+
+  $self->table->bind( $self->resource )
+
+And as long as ->resource does a conforming role, everything
+will just work as expected.
+
+AJAX-Events:
+
+We also demonstrate the possibility of assigning AJAX events
+to a snippet as well. Here we have 3 events (**) assigned; 
+update_cell, add_row, remove_row, each of which will get 
+transformed into a JSORB based method call during the 
+compilation phase (***). 
+
+It is the responsibility of the author of the snippet to 
+write the javascript code that triggers these events as 
+well as updates the UI. This should all be done using
+the "unubtrusive javascript" methodology so that the 
+UI code does not clutter the HTML. An example of this is 
+beyond the scope of this document (****).
+
+-----------------------------------------------------------
+-- Footnotes
+-----------------------------------------------------------
+
+(*) the use of the "name" attribute is somewhat arbitrary 
+    here, id would be better but given the restrictions that 
+    all IDs be unique it would be tricky. 
+
+(**) Note that the "async" keyword is just the current placeholder 
+     it may or may not be that in the final.
+
+(***) it will be the responsibilty of the greater web framework
+      to be able to handle the details of making these events
+      available. 
+
+(****) I really should write an example though, but probably 
+       for something much simpler then a table.
+
+
+
+

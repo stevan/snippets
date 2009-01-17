@@ -1,0 +1,76 @@
+-----------------------------------------------------------
+-- Forms and binding objects to them --
+-----------------------------------------------------------
+-- Class
+-----------------------------------------------------------
+
+package MyForm;
+use Moose;
+
+extends 'Snippet';
+
+has form => (selector => '#my_form', ... );
+has user => (isa => 'My::App::Model::User', ....);
+
+sub RUN {
+    my ($self, $r) = @_;
+    if ($self->page->is_submitted) {
+    
+        # ... update the user from the form
+        # which now has the values sent via
+        # the form submission
+        $self->user->first_name($self->form->first_name->value);
+        $self->user->last_name($self->form->last_name->value);  
+        $self->user->update;
+        
+        # alternately we could reverse bind
+        # and do something like ...
+        # $self->form->update_object($self->user);    
+          
+    }
+    else {
+        # ... bind the existing object
+        $self->form->bind($self->user);
+        
+        # or we could be more explicit ..
+        # $self->form->bind(
+        #     $self->user => (
+        #         first_name => 'input[name="first_name"]',
+        #         last_name  => 'input[name="last_name"]',
+        #     )
+        # );
+    }
+}
+
+1;
+
+-----------------------------------------------------------
+-- HTML
+-----------------------------------------------------------
+
+<form id="my_form">
+    <input type="text" name="first_name" />
+    <input type="text" name="last_name" />    
+    <hr>
+    <input type="submit" name="save" />
+</form>
+
+-----------------------------------------------------------
+-- Config
+-----------------------------------------------------------
+
+---
+- class: MyForm
+  html: my_form.html
+        
+-----------------------------------------------------------
+-- Description
+-----------------------------------------------------------
+
+
+-----------------------------------------------------------
+-- Footnotes
+-----------------------------------------------------------
+
+
+

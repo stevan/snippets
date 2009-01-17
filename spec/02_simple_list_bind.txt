@@ -1,0 +1,108 @@
+-----------------------------------------------------------
+-- Simple List Example --
+-----------------------------------------------------------
+-- Class
+-----------------------------------------------------------
+
+package MyList;
+use Moose;
+
+extends 'Snippet';
+
+has list => (selector => '#my_list', isa => 'ArrayRef[Int]');
+
+sub RUN {
+    my ($self, $r) = @_;
+    
+    $self->list->bind([ 1 .. 5 ]);
+
+    # also, $self->list([ 1 .. 5 ]) will 
+    # do ->bind under the covers
+}
+
+1;
+
+-----------------------------------------------------------
+-- HTML
+-----------------------------------------------------------
+
+<ul id="my_list"></ul>
+
+-----------------------------------------------------------
+-- Config
+-----------------------------------------------------------
+
+---
+- class: MyList
+  html: my_list.html
+  
+-----------------------------------------------------------
+-- Description
+-----------------------------------------------------------
+
+So, building on the previous (simple-label) comments, ...
+
+As with the simple label where we confirmed that the 
+class/attribute was compatible with the HTML, we do the
+same with this simple list.
+
+Data-Binding:
+
+When this is "compiled", we see that the attribute is 
+an ArrayRef[`a], and that the HTML counterpart is a UL, 
+which we know is a container of LI items, and so they 
+are considered compatible. This is done in the validation 
+step described in the simple-label example. The next step
+is the inflation step, in which we expand this to a
+Snippet::Element::HTML::UL object. Because UL is a known 
+container tag, it has a ->bind method (*) which when given
+an ArrayRef (**) will create and bind to multiple child LI 
+tags.
+
+As with the simple-label example, the following two lines 
+are equivilent:
+
+  $self->list([ 1 .. 5 ]);  
+  $self->list->bind([ 1 .. 5 ]);
+
+They will likely accomplish this DWIMery via coercions or
+some other kind of metaprogramming wizardry.
+
+The output of the ->render method of the Snippet would 
+be:
+    
+  <ul id="my_list">
+      <li>1</li>
+      <li>2</li>
+      <li>3</li>
+      <li>4</li>
+      <li>5</li>                
+  </ul>    
+
+In some cases having the system just generate basic LI
+tags to bind too is not good enough and we need to have 
+more control over the child elements. In this case you 
+simply need to provide a "template" from which the system
+can infer. So in that case you HTML becomes:
+
+  <ul id="my_list">
+      <li class="my_list_elements"></li>
+  </ul>
+
+If you require more complex nodes within the LI, then it 
+is recommended (for now at least) that you make your 
+attributes type ArrayRef[Snippet::Element] or somesuch.
+
+-----------------------------------------------------------
+-- Footnotes
+-----------------------------------------------------------
+
+(*) most likely provided by a Bindable trait or something
+
+(**) the ->bind should also handle object that do datastore 
+     roles as well, so in this case ->bind would expect either 
+     an ArrayRef or an object that does a role named something 
+     like Snippet::Binding::DataStore::SimpleList, which would 
+     implement a set of methods for retrieving values 
+     from something that resembled a list.
+
