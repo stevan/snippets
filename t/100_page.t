@@ -23,13 +23,11 @@ my $html_dir = Path::Class::Dir->new($FindBin::Bin, qw[ lib html ]);
 
 sub make_login {
     return TestApp::Pages::Login->new(
-        html => $html_dir->file(qw[ testapp pages login.html ]),
-        snippets => {
-            '.message'    => Snippet->new(html => '<strong>Please Login</strong>'),
-            '#login_form' => TestApp::Snippet::LoginForm->new(
-                html => $html_dir->file(qw[ testapp snippet loginform.html ])
-             ),
-        },
+        html       => $html_dir->file(qw[ testapp pages login.html ]),
+        message    => Snippet->new(html => '<strong>Please Login</strong>'),
+        login_form => TestApp::Snippet::LoginForm->new(
+            html => $html_dir->file(qw[ testapp snippet loginform.html ])
+         )
     );
 }
 

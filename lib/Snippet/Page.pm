@@ -14,18 +14,26 @@ has 'html' => (
     }
 );
 
-has 'snippets' => (
+has '_snippets_map' => (
     is      => 'ro',
     isa     => 'HashRef[Snippet]',   
-    default => sub { +{} },
+    lazy    => 1,
+    default => sub {
+        my $self = shift;
+        return +{
+            map  { $_->selector => $_->get_value($self)        }
+            grep { $_->does('Snippet::Meta::Attribute::Trait') } 
+            $self->meta->get_all_attributes
+        }
+    }
 );
 
 sub RUN {} # override me ...
 
 sub process {
     my ($self, $request) = @_;
-    foreach my $id (keys %{ $self->snippets }) {
-        $self->snippets->{$id}->process($request)
+    foreach my $id (keys %{ $self->_snippets_map }) {
+        $self->_snippets_map->{$id}->process($request)
     }
     $self->RUN($request);    
     $self;
@@ -34,11 +42,11 @@ sub process {
 sub render {
     my ($self) = @_;
     # for each snippet ...
-    foreach my $id (keys %{ $self->snippets }) {
+    foreach my $id (keys %{ $self->_snippets_map }) {
         # with the output of 
         # the snippet render()
         # method
-        if (my $out = $self->snippets->{$id}->render) {
+        if (my $out = $self->_snippets_map->{$id}->render) {
             # find the ID in our document
             # ... and then replace the html
             $self->find($id)->html($out);

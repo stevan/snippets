@@ -3,10 +3,22 @@ use Moose;
 
 extends 'Snippet::Page';
 
-# just a few little short cuts ...
-sub message          { (shift)->snippets->{'.message'}       }    
-sub login_form       { (shift)->snippets->{'#login_form'}    }
-sub is_authenticated { (shift)->login_form->is_authenticated }
+has 'message' => (
+    traits   => [ 'Snippet::Meta::Attribute::Trait' ],
+    selector => '.message',
+    is       => 'ro',
+    isa      => 'Snippet',   
+    required => 1
+);
+
+has 'login_form' => (
+    traits   => [ 'Snippet::Meta::Attribute::Trait' ],
+    selector => '#login_form',    
+    is       => 'ro',
+    isa      => 'TestApp::Snippet::LoginForm',   
+    required => 1,
+    handles  => [qw[ is_authenticated ]]
+);
 
 sub RUN {
     my ($self, $request) = @_;
