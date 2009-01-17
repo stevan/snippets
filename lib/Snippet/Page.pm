@@ -21,8 +21,8 @@ has '_snippets_map' => (
     default => sub {
         my $self = shift;
         return +{
-            map  { $_->selector => $_->get_value($self)        }
-            grep { $_->does('Snippet::Meta::Attribute::Trait') } 
+            map  { $_->selector => $_->get_value($self)                  }
+            grep { $_->does('Snippet::Meta::Attribute::Traits::Snippet') } 
             $self->meta->get_all_attributes
         }
     }

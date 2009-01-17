@@ -4,18 +4,18 @@ use Moose;
 extends 'Snippet::Page';
 
 has 'message' => (
-    traits   => [ 'Snippet::Meta::Attribute::Trait' ],
+    traits   => [ 'Snippet::Meta::Attribute::Traits::Snippet' ],
     selector => '.message',
     is       => 'ro',
-    isa      => 'Snippet',   
+    isa      => 'Snippet',
     required => 1
 );
 
 has 'login_form' => (
-    traits   => [ 'Snippet::Meta::Attribute::Trait' ],
-    selector => '#login_form',    
+    traits   => [ 'Snippet::Meta::Attribute::Traits::Snippet' ],
+    selector => '#login_form',
     is       => 'ro',
-    isa      => 'TestApp::Snippet::LoginForm',   
+    isa      => 'TestApp::Snippet::LoginForm',
     required => 1,
     handles  => [qw[ is_authenticated ]]
 );

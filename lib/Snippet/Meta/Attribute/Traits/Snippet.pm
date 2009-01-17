@@ -1,4 +1,4 @@
-package Snippet::Meta::Attribute::Trait;
+package Snippet::Meta::Attribute::Traits::Snippet;
 use Moose::Role;
 
 our $VERSION   = '0.01';
@@ -18,11 +18,11 @@ __END__
 
 =head1 NAME
 
-Snippet::Meta::Attribute::Trait - A Moosey solution to this problem
+Snippet::Meta::Attribute::Traits::Snippet - A Moosey solution to this problem
 
 =head1 SYNOPSIS
 
-  use Snippet::Meta::Attribute::Trait;
+  use Snippet::Meta::Attribute::Traits::Snippet;
 
 =head1 DESCRIPTION
 
