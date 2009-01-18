@@ -98,21 +98,15 @@ sub length {
     return $body->size();
 }
 
-sub each {
-    my ($self, $f) = @_;
-    $f->($_) foreach $self->children;
-    $self;
-}
-
 sub content {
     my ( $self, $replacement ) = @_;
 
     if ( ref $replacement ) {
         if ( blessed $replacement ) {
             if ( $replacement->isa("Snippet::Element") ) {
-                $self->_replace_inner_node($replacement->_child_nodes);
+                return $self->_replace_inner_node($replacement->_child_nodes);
             } else {
-                $self->_replace_inner_node($replacement);
+                return $self->_replace_inner_node($replacement);
             }
         } else {
             croak "Content must be a string or an object";
@@ -146,16 +140,31 @@ sub _prepare_new_child {
     }
 }
 
+sub each {
+    my ($self, $f) = @_;
+    $f->($_) foreach $self->children;
+    $self;
+}
+
 sub append {
     my ( $self, @children ) = @_;
-
-    $self->_body->addChild($_) for $self->_prepare_new_children(@children);
+    my $body = $self->_body->documentElement;
+    $body->addChild($_) for $self->_prepare_new_children(@children);
+    $self;
 }
 
 sub prepend {
     my ( $self, @children ) = @_;
+    my $body = $self->_body->documentElement;
+    $body->prepend($_) for reverse $self->_prepare_new_children(@children);
+    $self;
+}
 
-    $self->_body->prepend($_) for reverse $self->_prepare_new_children(@children);
+sub clear {
+    my ( $self ) = @_;
+    my $body = $self->_body->documentElement;
+    $body->removeChild($_) foreach $self->_child_nodes;
+    $self;
 }
 
 sub html {
